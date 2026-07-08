@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1e2a38">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Dad Wisdom</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+  :root {
+    --bg: #1e2a38;
+    --bg2: #16202b;
+    --btn: #e8563f;
+    --btn-dark: #b53c2a;
+    --btn-glow: rgba(232, 86, 63, 0.45);
+    --text: #f4ede2;
+    --muted: #8fa1b3;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    background: radial-gradient(ellipse at 50% 30%, var(--bg) 0%, var(--bg2) 100%);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+    user-select: none;
+    -webkit-user-select: none;
+    overflow: hidden;
+  }
+  header { text-align: center; padding-top: 12px; }
+  h1 {
+    font-size: clamp(1.6rem, 6vw, 2.4rem);
+    font-weight: 800;
+    letter-spacing: 0.04em;
+  }
+  h1 span { color: var(--btn); }
+  .tagline { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
+
+  .button-zone {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+  #wisdomBtn {
+    width: min(62vw, 280px);
+    height: min(62vw, 280px);
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    background: radial-gradient(circle at 35% 30%, var(--btn) 0%, var(--btn-dark) 85%);
+    box-shadow:
+      0 10px 0 var(--btn-dark),
+      0 18px 40px rgba(0, 0, 0, 0.5),
+      0 0 60px var(--btn-glow);
+    color: #fff;
+    font-size: clamp(1.3rem, 6vw, 2rem);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+    touch-action: manipulation;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  #wisdomBtn .sub { font-size: 0.75rem; font-weight: 600; opacity: 0.85; letter-spacing: 0.15em; }
+  #wisdomBtn:active, #wisdomBtn.pressed {
+    transform: translateY(8px);
+    box-shadow:
+      0 2px 0 var(--btn-dark),
+      0 8px 20px rgba(0, 0, 0, 0.5),
+      0 0 80px var(--btn-glow);
+  }
+  #wisdomBtn.playing { animation: pulse 0.9s ease-in-out infinite; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 10px 0 var(--btn-dark), 0 18px 40px rgba(0,0,0,0.5), 0 0 50px var(--btn-glow); }
+    50%      { box-shadow: 0 10px 0 var(--btn-dark), 0 18px 40px rgba(0,0,0,0.5), 0 0 100px var(--btn-glow); }
+  }
+
+  #caption {
+    min-height: 3.2em;
+    margin-top: 32px;
+    text-align: center;
+    font-size: clamp(1rem, 4.5vw, 1.35rem);
+    font-style: italic;
+    max-width: 480px;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+  #caption.visible { opacity: 1; }
+  #caption::before { content: "\201C"; color: var(--btn); }
+  #caption::after { content: "\201D"; color: var(--btn); }
+
+  footer {
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-align: center;
+    line-height: 1.5;
+  }
+  footer .hint { color: var(--btn); }
+</style>
+</head>
+<body>
+  <header>
+    <h1>DAD <span>WISDOM</span></h1>
+    <div class="tagline">Press for a timeless truth</div>
+  </header>
+
+  <div class="button-zone">
+    <button id="wisdomBtn" aria-label="Play random dad wisdom">
+      Wisdom
+      <span class="sub">press me</span>
+    </button>
+    <div id="caption"></div>
+  </div>
+
+  <footer id="status"></footer>
+
+<script>
+(() => {
+  const btn = document.getElementById('wisdomBtn');
+  const caption = document.getElementById('caption');
+  const status = document.getElementById('status');
+
+  let clips = [];          // { file, label } — real recordings from clips.json
+  let fallbacks = [];      // text-only wisdom, spoken via speech synthesis
+  let lastIndex = -1;
+  let audio = null;
+
+  // ---- Load clip manifest -------------------------------------------------
+  fetch('clips.json?v=' + Date.now())
+    .then(r => r.json())
+    .then(data => {
+      clips = (data.clips || []).filter(c => c.file);
+      fallbacks = data.fallbacks || [];
+      if (clips.length === 0) {
+        status.innerHTML =
+          'No recordings yet — using a robot stand-in.<br>' +
+          '<span class="hint">Drop MP3s in the audio/ folder and list them in clips.json.</span>';
+      } else {
+        status.textContent = clips.length + ' pieces of wisdom loaded';
+      }
+    })
+    .catch(() => {
+      status.textContent = 'Could not load clips.json — check that it exists and is valid JSON.';
+    });
+
+  // ---- Random pick with no immediate repeat -------------------------------
+  function pickIndex(length) {
+    if (length === 1) return 0;
+    let i;
+    do { i = Math.floor(Math.random() * length); } while (i === lastIndex);
+    lastIndex = i;
+    return i;
+  }
+
+  // ---- Playback -----------------------------------------------------------
+  function playClip(clip) {
+    if (audio) { audio.pause(); audio = null; }
+    audio = new Audio(clip.file);
+    btn.classList.add('playing');
+    showCaption(clip.label || '');
+    audio.play().catch(() => {
+      status.textContent = 'Could not play ' + clip.file + ' — is the file there?';
+      btn.classList.remove('playing');
+    });
+    audio.onended = () => btn.classList.remove('playing');
+  }
+
+  function speakFallback(text) {
+    if (!('speechSynthesis' in window)) {
+      showCaption(text);
+      return;
+    }
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.95;
+    u.pitch = 0.8; // dad register
+    btn.classList.add('playing');
+    showCaption(text);
+    u.onend = () => btn.classList.remove('playing');
+    speechSynthesis.speak(u);
+  }
+
+  let captionTimer;
+  function showCaption(text) {
+    clearTimeout(captionTimer);
+    if (!text) { caption.classList.remove('visible'); return; }
+    caption.textContent = text;
+    caption.classList.add('visible');
+    captionTimer = setTimeout(() => caption.classList.remove('visible'), 6000);
+  }
+
+  // ---- Button -------------------------------------------------------------
+  btn.addEventListener('click', () => {
+    if (navigator.vibrate) navigator.vibrate(30);
+    if (clips.length > 0) {
+      playClip(clips[pickIndex(clips.length)]);
+    } else if (fallbacks.length > 0) {
+      speakFallback(fallbacks[pickIndex(fallbacks.length)]);
+    } else {
+      showCaption('Add recordings to clips.json first!');
+    }
+  });
+
+  // ---- Service worker (offline support) -----------------------------------
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
