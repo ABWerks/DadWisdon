@@ -1,6 +1,6 @@
 // Dad Wisdon service worker — caches the app shell and audio clips for offline use.
 // Bump CACHE_VERSION whenever you add/change clips so devices pick up the new files.
-const CACHE_VERSION = 'dad-wisdon-v2';
+const CACHE_VERSION = 'dad-wisdon-v3';
 const APP_SHELL = [
   '.',
   'index.html',
@@ -39,18 +39,41 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Cache-first, falling back to network (and caching what we fetch).
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  const req = event.request;
+
+  // Network-first for page navigations so the newest app shell shows when
+  // online; fall back to cache when offline. This avoids serving a stale
+  // index.html after the app is updated.
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      (async () => {
+        try {
+          const fresh = await fetch(req);
+          const cache = await caches.open(CACHE_VERSION);
+          cache.put(req, fresh.clone());
+          return fresh;
+        } catch (e) {
+          return (await caches.match(req, { ignoreSearch: true }))
+            || (await caches.match('index.html'))
+            || new Response('Offline', { status: 503 });
+        }
+      })()
+    );
+    return;
+  }
+
+  // Cache-first for everything else (audio, icons, json), caching what we fetch.
   event.respondWith(
     (async () => {
-      const cached = await caches.match(event.request, { ignoreSearch: true });
+      const cached = await caches.match(req, { ignoreSearch: true });
       if (cached) return cached;
       try {
-        const response = await fetch(event.request);
+        const response = await fetch(req);
         if (response.ok) {
           const cache = await caches.open(CACHE_VERSION);
-          cache.put(event.request, response.clone());
+          cache.put(req, response.clone());
         }
         return response;
       } catch (e) {

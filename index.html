@@ -218,6 +218,14 @@
   // ---- Service worker (offline support) -----------------------------------
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
+    // When an updated service worker takes control, reload once so the page
+    // picks up the new app shell instead of the version already rendered.
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloading) return;
+      reloading = true;
+      location.reload();
+    });
   }
 })();
 </script>
