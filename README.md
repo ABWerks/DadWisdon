@@ -1,4 +1,4 @@
-# Dad Wisdom
+# Dad Wisdon
 
 A one-button app that plays a random recording of Dad saying the things Dad always says. Like the Bullshit Button, but wiser.
 
@@ -55,4 +55,4 @@ Open the hosted URL → browser menu → **Add to Home Screen**. It launches ful
 ## Later: the physical button
 
 The `audio/` folder is your asset library for a hardware version — the same MP3s drop straight onto an SD card for a DFPlayer Mini (+ button + speaker, ~$10) or a Raspberry Pi build.
-# DadWisdon
+

@@ -1,6 +1,6 @@
-// Dad Wisdom service worker — caches the app shell and audio clips for offline use.
+// Dad Wisdon service worker — caches the app shell and audio clips for offline use.
 // Bump CACHE_VERSION whenever you add/change clips so devices pick up the new files.
-const CACHE_VERSION = 'dad-wisdom-v1';
+const CACHE_VERSION = 'dad-wisdon-v2';
 const APP_SHELL = [
   '.',
   'index.html',

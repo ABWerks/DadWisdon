@@ -1,7 +1,7 @@
 {
-  "name": "Dad Wisdom",
-  "short_name": "DadWisdom",
-  "description": "Press the button for a random piece of dad wisdom.",
+  "name": "Dad Wisdon",
+  "short_name": "DadWisdon",
+  "description": "Press the button for a random piece of dad wisdon.",
   "start_url": ".",
   "display": "standalone",
   "orientation": "portrait",
