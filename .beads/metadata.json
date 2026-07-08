@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "DadWisdon",
+  "project_id": "f01918fc-e81b-499e-8cec-9e1b3c81b7fb"
+}
